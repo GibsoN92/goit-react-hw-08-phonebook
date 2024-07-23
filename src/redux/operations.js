@@ -2,14 +2,82 @@ import axios from "axios";
 import { createAsyncThunk } from "@reduxjs/toolkit";
 
 const client = axios.create({
-  baseURL: "https://668eec82bf9912d4c93027d0.mockapi.io",
+  baseURL: "https://connections-api.goit.global/",
 });
+
+client.interceptors.request.use((config) => {
+  config.headers["Authorization"] = `Bearer ${localStorage.getItem("token")}`;
+  return config;
+});
+
+export const loginUser = createAsyncThunk(
+  "user/login",
+  async ({ email, password }, thunkAPI) => {
+    try {
+      const response = await client.post("/users/login", { email, password });
+      localStorage.setItem("token", response.data.token);
+      return response.data;
+    } catch (error) {
+      alert(error.message);
+      return thunkAPI.rejectWithValue(error.message);
+    }
+  },
+);
+
+export const refreshUser = createAsyncThunk(
+  "user/refresh",
+  async (_, thunkAPI) => {
+    const token = localStorage.getItem("token");
+    if (token) {
+      try {
+        const response = await client.get("/users/current");
+        return response.data;
+      } catch (error) {
+        alert(error.message);
+        return thunkAPI.rejectWithValue(error.message);
+      }
+    } else {
+      return thunkAPI.rejectWithValue(null);
+    }
+  },
+);
+
+export const logoutUser = createAsyncThunk(
+  "user/logout",
+  async (_, thunkAPI) => {
+    try {
+      await client.post("/users/logout");
+      localStorage.clear();
+    } catch (error) {
+      alert(error.message);
+      return thunkAPI.rejectWithValue(error.message);
+    }
+  },
+);
+
+export const registerUser = createAsyncThunk(
+  "user/register",
+  async ({ name, email, password }, thunkAPI) => {
+    try {
+      const response = await client.post("/users/signup", {
+        name,
+        email,
+        password,
+      });
+      localStorage.setItem("token", response.data.token);
+      return response.data;
+    } catch (error) {
+      alert(error.message);
+      return thunkAPI.rejectWithValue(error.message);
+    }
+  },
+);
 
 export const fetchContacts = createAsyncThunk(
   "contacts/fetchAll",
   async (_, thunkAPI) => {
     try {
-      const response = await client.get("/contacts/contacts");
+      const response = await client.get("/contacts");
       return response.data;
     } catch (error) {
       return thunkAPI.rejectWithValue(error.message);
@@ -19,15 +87,15 @@ export const fetchContacts = createAsyncThunk(
 
 export const addContact = createAsyncThunk(
   "contacts/addContact",
-  async ({ name, phone }, thunkAPI) => {
+  async ({ name, number }, thunkAPI) => {
     try {
-      console.log("Sending request to add contact:", { name, phone });
-      const response = await client.post("/contacts/contacts", { name, phone });
-      console.log("Response from server:", response.data);
+      const response = await client.post("/contacts", {
+        name,
+        number,
+      });
       return response.data;
     } catch (error) {
-      console.error("Error adding contact:", error.message);
-      return thunkAPI.rejectWithValue(error.message);
+      return thunkAPI.rejectWithValue(error);
     }
   },
 );
@@ -36,10 +104,10 @@ export const deleteContact = createAsyncThunk(
   "contacts/deleteContact",
   async ({ contactId }, thunkAPI) => {
     try {
-      const response = await client.delete(`/contacts/contacts/${contactId}`);
+      const response = await client.delete(`/contacts/${contactId}`);
       return response.data;
-    } catch (error) {
-      return thunkAPI.rejectWithValue(error.message);
+    } catch (e) {
+      return thunkAPI.rejectWithValue(e.message);
     }
   },
 );
